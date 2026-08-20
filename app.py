@@ -5,7 +5,24 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="Budget Foyer Kanane", page_icon="💰", layout="wide")
 
-SHEET_ID = "1DTc4WtKNQfWJG31oR-vFn5N2QiqxM3uLkJCGl_T61mw"
+# ============================================================
+# AUTHENTIFICATION
+# ============================================================
+PASSWORD = st.secrets["PASSWORD"]
+SHEET_ID = st.secrets["SHEET_ID"]
+
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+
+if not st.session_state.auth:
+    st.title("💰 Budget Foyer Kanane")
+    pwd = st.text_input("🔒 Mot de passe", type="password")
+    if pwd == PASSWORD:
+        st.session_state.auth = True
+        st.rerun()
+    elif pwd:
+        st.error("Mot de passe incorrect")
+    st.stop()
 
 # ============================================================
 # CHARGEMENT
@@ -48,36 +65,27 @@ except Exception as e:
     st.stop()
 
 def g(label, default=0):
-    """Cherche un label dans les paramètres (match partiel)."""
-    if label in params:
-        return params[label]["valeur"]
+    if label in params: return params[label]["valeur"]
     for k, v in params.items():
-        if label.lower() in k.lower():
-            return v["valeur"]
+        if label.lower() in k.lower(): return v["valeur"]
     return default
 
 def g_note(label):
-    if label in params:
-        return params[label]["note"]
+    if label in params: return params[label]["note"]
     for k, v in params.items():
-        if label.lower() in k.lower():
-            return v["note"]
+        if label.lower() in k.lower(): return v["note"]
     return ""
 
-# --- Valeurs extraites du Sheet ---
+# --- Valeurs du Sheet ---
 total_revenus = g("Total revenus foyer")
 total_charges = g("Total charges fixes")
 reste_dispatcher = g("Reste à dispatcher")
 total_enveloppes = g("Total enveloppes")
 budget_vie = g("Vie du foyer")
 
-# Enveloppes (labels exacts du Sheet)
 ENVELOPPES_KEYS = [
-    "Reconstitution matelas",
-    "Sur-remboursement crédit conso",
-    "Investissement long terme",
-    "Lancement freelance",
-    "Vacances",
+    "Reconstitution matelas", "Sur-remboursement crédit conso",
+    "Investissement long terme", "Lancement freelance", "Vacances",
     "Réserve achats / imprévus",
 ]
 enveloppes = {}
@@ -86,10 +94,8 @@ for k in ENVELOPPES_KEYS:
     if val is not None and val > 0:
         enveloppes[k] = {"mensuel": val, "destination": g_note(k)}
 
-# Patrimoine (labels exacts du Sheet)
 patrimoine_raw = {
     "Livret A": {"objectif": 10000, "icone": "🛡️"},
-    "Numéraire PEA CE": {"objectif": 48000, "icone": "📈"},
     "PEA titres (Ondaine Pilat)": {"objectif": 48000, "icone": "📈"},
     "Livret Vacances": {"objectif": 2400, "icone": "✈️"},
     "Livret Business": {"objectif": 5000, "icone": "🚀"},
@@ -103,13 +109,10 @@ for label, config in patrimoine_raw.items():
         if label == "PEA titres (Ondaine Pilat)":
             pea_num = g("Numéraire PEA CE", 0)
             patrimoine["PEA (total)"] = {"solde": solde + pea_num, "objectif": 48000, "icone": "📈"}
-        elif label == "Numéraire PEA CE":
-            continue  # déjà compté ci-dessus
         else:
             patrimoine[label] = {"solde": solde, **config}
 
-# Crédit
-credit_solde = g("Crédit conso (mensualité 255,64 €)", g("Crédit conso", 5900))
+credit_solde = g("Crédit conso (mensualité 255,64", g("Crédit conso", 5900))
 credit_mensualite = 255.64
 credit_sur = g("Sur-remboursement crédit conso", 400)
 versement_matelas = g("Reconstitution matelas", 500)
